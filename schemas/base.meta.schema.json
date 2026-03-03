@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "base.meta.schema.json",
+  "title": "Model Console Metadata",
+  "type": "object",
+  "required": [
+    "model_id",
+    "role",
+    "loop_id",
+    "round_id",
+    "artifact_id",
+    "timestamp",
+    "tool_version"
+  ],
+  "properties": {
+    "model_id": {"type": "string", "minLength": 1},
+    "role": {"type": "string", "enum": ["IMPLEMENTER", "REVIEWER"]},
+    "loop_id": {"type": "string", "minLength": 1},
+    "round_id": {"type": "string", "minLength": 1},
+    "artifact_id": {"type": "string", "minLength": 1},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "tool_version": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

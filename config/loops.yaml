@@ -1,0 +1,68 @@
+loops:
+  bootstrap_loop:
+    artifact_kind: plan
+    max_rounds: 2
+    score_threshold: 80
+    stagnation_rounds: 1
+    stagnation_epsilon: 0.1
+    swap_next_round: true
+    swap_on_failure: true
+    role_assignment:
+      strategy: round_robin
+      implementers: [mock_impl]
+      reviewers: [mock_rev]
+      implementer_count: 1
+      reviewer_count: 1
+    eval_commands:
+      - "echo 'bootstrap eval ok'"
+
+  code_loop:
+    artifact_kind: code
+    max_rounds: 4
+    score_threshold: 88
+    stagnation_rounds: 2
+    stagnation_epsilon: 0.5
+    swap_next_round: false
+    swap_on_failure: true
+    role_assignment:
+      strategy: round_robin
+      implementers: [codex_primary, gemini_primary]
+      reviewers: [claude_primary]
+      implementer_count: 1
+      reviewer_count: 1
+    eval_commands:
+      - "echo 'configure real lint/test/build commands in config/loops.yaml'"
+
+  prompt_loop:
+    artifact_kind: prompt
+    max_rounds: 3
+    score_threshold: 90
+    stagnation_rounds: 2
+    stagnation_epsilon: 0.5
+    swap_next_round: true
+    swap_on_failure: true
+    role_assignment:
+      strategy: round_robin
+      implementers: [claude_primary, codex_primary, gemini_primary]
+      reviewers: [gemini_primary, codex_primary, claude_primary]
+      implementer_count: 1
+      reviewer_count: 1
+    eval_commands:
+      - "echo 'prompt loop rubric check done'"
+
+  live_reasoning_loop:
+    artifact_kind: plan
+    max_rounds: 2
+    score_threshold: 85
+    stagnation_rounds: 1
+    stagnation_epsilon: 0.1
+    swap_next_round: true
+    swap_on_failure: true
+    role_assignment:
+      strategy: round_robin
+      implementers: [codex_primary]
+      reviewers: [gemini_primary]
+      implementer_count: 1
+      reviewer_count: 1
+    eval_commands:
+      - "echo 'live reasoning loop eval completed'"

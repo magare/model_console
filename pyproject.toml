@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "model-console"
+version = "0.1.0"
+description = "Local-first role-agnostic model orchestration loops"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "PyYAML>=6.0",
+  "jsonschema>=4.22"
+]
+
+[project.scripts]
+mc = "model_console.cli:main"
+
+[tool.setuptools]
+packages = ["model_console"]

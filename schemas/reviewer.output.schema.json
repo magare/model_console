@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reviewer.output.schema.json",
+  "title": "Reviewer Output",
+  "type": "object",
+  "required": [
+    "meta",
+    "status",
+    "overall_score",
+    "critique",
+    "prioritized_fixes",
+    "acceptance_tests",
+    "red_flags",
+    "unsure"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "model_id",
+        "role",
+        "loop_id",
+        "round_id",
+        "artifact_id",
+        "timestamp",
+        "tool_version"
+      ],
+      "properties": {
+        "model_id": {"type": "string", "minLength": 1},
+        "role": {"type": "string", "const": "REVIEWER"},
+        "loop_id": {"type": "string", "minLength": 1},
+        "round_id": {"type": "string", "minLength": 1},
+        "artifact_id": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "tool_version": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "status": {"type": "string", "enum": ["ok", "partial", "blocked"]},
+    "overall_score": {"type": "number", "minimum": 0, "maximum": 100},
+    "critique": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "prioritized_fixes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["priority", "fix", "rationale"],
+        "properties": {
+          "priority": {"type": "string", "enum": ["P0", "P1", "P2"]},
+          "fix": {"type": "string"},
+          "rationale": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "acceptance_tests": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "red_flags": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "unsure": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}

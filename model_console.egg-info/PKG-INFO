@@ -1,0 +1,78 @@
+Metadata-Version: 2.4
+Name: model-console
+Version: 0.1.0
+Summary: Local-first role-agnostic model orchestration loops
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: jsonschema>=4.22
+Dynamic: requires-python
+
+# Model Console (V1 scaffold)
+
+Local-first orchestration runner for iterative IMPLEMENTER/REVIEWER loops, with role swapping, JSON contracts, run logs, and git checkpoints.
+
+## What this gives you
+
+- Role-agnostic loop engine (`IMPLEMENTER` and `REVIEWER` are config roles, not hardcoded to one model)
+- Round-based orchestration with optional role swaps
+- Strict JSON schema validation for both roles
+- Per-run logs, prompts, raw outputs, parsed outputs, and reports
+- Safety policy (allowlist + deny patterns)
+- Git branch-per-run and commit-per-round with rollback via `git revert`
+- Resume support (`mc resume --run-id ...`)
+
+## Install
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip setuptools wheel
+python3 -m pip install -e .
+```
+
+If you install with macOS Xcode system Python outside a virtualenv, editable install can fail because user site-packages may be disabled.
+
+## Quick smoke test (no external model CLI needed)
+
+```bash
+mc run --task tasks/inbox/T-001-bootstrap.md --loop bootstrap_loop
+```
+
+This uses mock agents and produces artifacts/logs in `runs/<run_id>/...`.
+
+## Real loop run (Claude/Codex/Gemini)
+
+1. Authenticate/install your CLIs and ensure they are on `PATH`.
+2. Edit `config/agents.yaml` models and `config/loops.yaml` eval commands.
+3. Run:
+
+```bash
+mc run --task tasks/inbox/T-002-real-task.md --loop code_loop
+```
+
+## Resume
+
+```bash
+mc resume --run-id <run_id>
+```
+
+## Status
+
+```bash
+mc status --run-id <run_id>
+```
+
+## File layout
+
+- `model_console/`: runner implementation
+- `config/`: agents/loops/policies
+- `prompts/`: role-based prompt templates
+- `schemas/`: strict JSON contracts
+- `runs/`: generated run state/logs/reports/artifacts
+
+## Notes
+
+- By default, `code_loop` includes placeholder eval commands. Replace with project-specific checks.
+- Safety deny patterns block common destructive commands.
+- For deterministic runs, pin CLI versions and model IDs in your environment.

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "implementer.output.schema.json",
+  "title": "Implementer Output",
+  "type": "object",
+  "required": ["meta", "status", "artifact", "change_summary", "risk_notes", "todos", "unsure"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "model_id",
+        "role",
+        "loop_id",
+        "round_id",
+        "artifact_id",
+        "timestamp",
+        "tool_version"
+      ],
+      "properties": {
+        "model_id": {"type": "string", "minLength": 1},
+        "role": {"type": "string", "const": "IMPLEMENTER"},
+        "loop_id": {"type": "string", "minLength": 1},
+        "round_id": {"type": "string", "minLength": 1},
+        "artifact_id": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "tool_version": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "status": {"type": "string", "enum": ["ok", "partial", "blocked"]},
+    "artifact": {
+      "type": "object",
+      "required": ["kind", "path", "content"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["prompt", "plan", "code", "spec"]},
+        "path": {"type": "string", "minLength": 1},
+        "content": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "change_summary": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "risk_notes": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "todos": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "unsure": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}

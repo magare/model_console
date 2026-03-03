@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+import argparse
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Mock model agent for local tests")
+    parser.add_argument("--role", required=True, choices=["IMPLEMENTER", "REVIEWER"])
+    parser.add_argument("--prompt-file", required=True)
+    parser.add_argument("--model-id", required=True)
+    args = parser.parse_args()
+
+    prompt_text = Path(args.prompt_file).read_text(encoding="utf-8")
+
+    loop_id = "unknown_loop"
+    round_id = "r00"
+    artifact_id = "artifact"
+    for line in prompt_text.splitlines():
+        if line.startswith("Loop:"):
+            parts = line.replace(":", "").split()
+            if len(parts) >= 6:
+                loop_id = parts[1]
+                round_id = parts[3]
+                artifact_id = parts[5]
+
+    if args.role == "IMPLEMENTER":
+        payload = {
+            "meta": {
+                "model_id": args.model_id,
+                "role": "IMPLEMENTER",
+                "loop_id": loop_id,
+                "round_id": round_id,
+                "artifact_id": artifact_id,
+                "timestamp": utc_now_iso(),
+                "tool_version": "mock-agent 1.0",
+            },
+            "status": "ok",
+            "artifact": {
+                "kind": "plan",
+                "path": "artifacts/mock_artifact.md",
+                "content": f"# Mock artifact\n\nGenerated in {round_id}.\n",
+            },
+            "change_summary": ["Generated deterministic mock artifact content"],
+            "risk_notes": [],
+            "todos": ["Replace mock provider with real CLI provider"],
+            "unsure": [],
+        }
+    else:
+        payload = {
+            "meta": {
+                "model_id": args.model_id,
+                "role": "REVIEWER",
+                "loop_id": loop_id,
+                "round_id": round_id,
+                "artifact_id": artifact_id,
+                "timestamp": utc_now_iso(),
+                "tool_version": "mock-agent 1.0",
+            },
+            "status": "ok",
+            "overall_score": 90,
+            "critique": ["Structure is acceptable for bootstrap testing."],
+            "prioritized_fixes": [
+                {
+                    "priority": "P2",
+                    "fix": "Replace placeholder artifact path once real task is known.",
+                    "rationale": "Mock output is generic by design.",
+                }
+            ],
+            "acceptance_tests": ["Artifact file exists and is non-empty"],
+            "red_flags": [],
+            "unsure": [],
+        }
+
+    print(json.dumps(payload))
+
+
+if __name__ == "__main__":
+    main()
