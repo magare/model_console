@@ -28,3 +28,4 @@ policies:
     - '(^|\\s):\\(\\)\\s*\\{\\s*:\\|:&\\s*\\};:'
   run_timeout_seconds: 900
   model_timeout_seconds: 300
+  max_completed_runs: 50

@@ -75,6 +75,11 @@ def load_app_config(
         deny_command_patterns=list(policy_root.get("deny_command_patterns") or []),
         run_timeout_seconds=int(policy_root.get("run_timeout_seconds", 600)),
         model_timeout_seconds=int(policy_root.get("model_timeout_seconds", 240)),
+        max_completed_runs=(
+            int(policy_root["max_completed_runs"])
+            if policy_root.get("max_completed_runs") is not None
+            else None
+        ),
     )
 
     if not agents:

@@ -118,4 +118,5 @@ python3 -m pip uninstall -y UNKNOWN
 
 - By default, `code_loop` includes placeholder eval commands. Replace with project-specific checks.
 - Safety deny patterns block common destructive commands.
+- CLI path args are workspace-confined: `--task`, `--runs-dir`, `--config-dir`, `--schemas-dir`, and `--prompts-dir` must resolve inside `--workspace`.
 - For deterministic runs, pin CLI versions and model IDs in your environment.

@@ -44,6 +44,7 @@ class Policies:
     deny_command_patterns: list[str]
     run_timeout_seconds: int = 600
     model_timeout_seconds: int = 240
+    max_completed_runs: int | None = None
 
 
 @dataclass(frozen=True)
