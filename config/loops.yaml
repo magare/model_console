@@ -100,3 +100,24 @@ loops:
       reviewer_count: 1
     eval_commands:
       - "echo 'live reasoning deep codex loop eval completed'"
+
+  complex_reasoning_loop:
+    artifact_kind: spec
+    max_rounds: 8
+    score_threshold: 90
+    stagnation_rounds: 2
+    stagnation_epsilon: 0.0
+    swap_next_round: false
+    swap_on_failure: false
+    execution_mode: dependency_workflow
+    max_step_retries: 2
+    require_dependency_closure: true
+    require_final_integration_step: true
+    role_assignment:
+      strategy: static
+      implementers: [codex_primary]
+      reviewers: [gemini_primary]
+      implementer_count: 1
+      reviewer_count: 1
+    eval_commands:
+      - "echo 'complex reasoning loop eval completed'"

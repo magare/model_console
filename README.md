@@ -62,6 +62,28 @@ mc run --task tasks/inbox/T-003-live-reasoning-test.md --loop live_reasoning_loo
 
 # Code loop (edit eval commands in config first)
 mc run --task tasks/inbox/T-002-real-task.md --loop code_loop --run-id code-001
+
+# Complex dependency-aware loop
+mc run --task tasks/inbox/T-006-complex-template.md --loop complex_reasoning_loop --run-id complex-001
+```
+
+### Complex task format (ComplexTaskV1)
+
+Use a JSON object in the task file with `task_type: "complex"` and a `steps` DAG.
+When present, `complex_reasoning_loop` runs dependency-aware execution with checkpointed workflow state.
+
+```json
+{
+  "task_type": "complex",
+  "objective": "Ship feature X with migration and docs",
+  "deliverables": ["feature code", "migration", "docs"],
+  "constraints": ["deterministic output"],
+  "steps": [
+    {"id": "s01", "description": "Design API", "depends_on": [], "done_when": ["file_exists(specs/api.md)"]},
+    {"id": "s02", "description": "Implement API", "depends_on": ["s01"], "done_when": ["file_exists(src/api.ts)"]},
+    {"id": "s03", "description": "Write docs", "depends_on": ["s02"], "done_when": ["file_exists(docs/api.md)"]}
+  ]
+}
 ```
 
 ### Live mode

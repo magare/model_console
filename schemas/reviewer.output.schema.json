@@ -63,6 +63,16 @@
       "type": "array",
       "items": {"type": "string"}
     },
+    "workflow_checks": {
+      "type": "object",
+      "required": ["dependency_ok", "step_done_claim_ok", "deadlock_detected"],
+      "properties": {
+        "dependency_ok": {"type": "boolean"},
+        "step_done_claim_ok": {"type": "boolean"},
+        "deadlock_detected": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
     "unsure": {
       "type": "array",
       "items": {"type": "string"}

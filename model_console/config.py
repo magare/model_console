@@ -65,6 +65,12 @@ def load_app_config(
             stagnation_epsilon=float(raw.get("stagnation_epsilon", 0.5)),
             swap_next_round=bool(raw.get("swap_next_round", False)),
             swap_on_failure=bool(raw.get("swap_on_failure", True)),
+            execution_mode=str(raw.get("execution_mode", "standard")),
+            max_step_retries=int(raw.get("max_step_retries", 1)),
+            require_dependency_closure=bool(raw.get("require_dependency_closure", False)),
+            require_final_integration_step=bool(
+                raw.get("require_final_integration_step", False)
+            ),
             role_assignment=role_cfg,
             eval_commands=list(raw.get("eval_commands") or []),
         )

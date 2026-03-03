@@ -35,6 +35,10 @@ class LoopConfig:
     swap_next_round: bool
     swap_on_failure: bool
     role_assignment: RoleAssignmentConfig
+    execution_mode: str = "standard"
+    max_step_retries: int = 1
+    require_dependency_closure: bool = False
+    require_final_integration_step: bool = False
     eval_commands: list[str] = field(default_factory=list)
 
 

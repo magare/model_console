@@ -15,8 +15,21 @@ Current artifact snapshot:
 Prioritized fixes to apply:
 {prioritized_fixes}
 
+Task mode:
+{task_mode}
+
+Workflow context:
+{workflow_context}
+
+Selected step id:
+{selected_step_id}
+
 Constraints:
 - Make minimal necessary changes.
 - Keep behavior deterministic.
 - Include risk notes and TODOs.
 - Output must be valid JSON and schema-compliant.
+- If task mode is `complex`, execute exactly one ready step per round.
+- If task mode is `complex`, keep `done_when` conditions machine-evaluable (for example: `file_exists(path)` or `command_exit(cmd)==0`).
+- If task mode is `complex`, populate `progress.phase`, `progress.selected_step_id`, and `progress.completed_step_ids`.
+- If task mode is `simple`, preserve existing single-task behavior.
