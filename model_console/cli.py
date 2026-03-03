@@ -51,6 +51,18 @@ def build_parser() -> argparse.ArgumentParser:
     status_p.add_argument("--workspace", default=".", help="Workspace root")
     status_p.add_argument("--runs-dir", default="runs", help="Runs directory")
 
+    cleanup_p = sub.add_parser("cleanup", help="Prune old completed runs")
+    cleanup_p.add_argument("--workspace", default=".", help="Workspace root")
+    cleanup_p.add_argument("--config-dir", default="config", help="Config directory")
+    cleanup_p.add_argument("--schemas-dir", default="schemas", help="Schema directory")
+    cleanup_p.add_argument("--prompts-dir", default="prompts", help="Prompt template directory")
+    cleanup_p.add_argument("--runs-dir", default="runs", help="Runs directory")
+    cleanup_p.add_argument(
+        "--max-completed-runs",
+        type=int,
+        help="Optional override for completed run retention limit",
+    )
+
     return parser
 
 
@@ -147,6 +159,35 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_cleanup(args: argparse.Namespace) -> int:
+    workspace = Path(args.workspace).resolve()
+    config_dir = _resolve_within_workspace(workspace, args.config_dir, "--config-dir")
+    schemas_dir = _resolve_within_workspace(workspace, args.schemas_dir, "--schemas-dir")
+    prompts_dir = _resolve_within_workspace(workspace, args.prompts_dir, "--prompts-dir")
+    runs_dir = _resolve_within_workspace(workspace, args.runs_dir, "--runs-dir")
+
+    app_cfg = load_app_config(
+        workspace_root=workspace,
+        config_dir=config_dir,
+        schemas_dir=schemas_dir,
+        prompts_dir=prompts_dir,
+        run_root=runs_dir,
+    )
+    limit = (
+        args.max_completed_runs
+        if args.max_completed_runs is not None
+        else app_cfg.policies.max_completed_runs
+    )
+    summary = _prune_completed_runs(
+        runs_root=runs_dir,
+        max_completed_runs=limit,
+        protected_run_ids=set(),
+    )
+    _print_prune_summary(summary)
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -158,6 +199,8 @@ def main() -> int:
             return cmd_resume(args)
         if args.command == "status":
             return cmd_status(args)
+        if args.command == "cleanup":
+            return cmd_cleanup(args)
     except (FileNotFoundError, ValueError, RuntimeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

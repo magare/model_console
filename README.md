@@ -8,6 +8,7 @@ Local-first orchestration runner for iterative IMPLEMENTER/REVIEWER loops, with 
 - Round-based orchestration with optional role swaps
 - Strict JSON schema validation for both roles
 - Per-run logs, prompts, raw outputs, parsed outputs, and reports
+- Automatic retention of completed runs to cap disk growth
 - Safety policy (allowlist + deny patterns)
 - Git branch-per-run and commit-per-round with rollback via `git revert`
 - Resume support (`mc resume --run-id ...`)
@@ -41,6 +42,7 @@ mc --help
 mc run --help
 mc resume --help
 mc status --help
+mc cleanup --help
 ```
 
 ### Check model CLIs
@@ -81,12 +83,37 @@ mc status --run-id run-001
 mc resume --run-id run-001
 ```
 
+### Manual cleanup
+
+```bash
+# Use configured retention from config/policies.yaml
+mc cleanup
+
+# One-off aggressive cleanup (keep only latest 10 completed runs)
+mc cleanup --max-completed-runs 10
+```
+
 ### Find available run IDs
 
 ```bash
 ls -1 runs
 find runs -maxdepth 2 -name state.json | sort
 ```
+
+### Run retention (disk control)
+
+Completed run directories are auto-pruned after each `mc run` / `mc resume`.
+The retention cap is configured in `config/policies.yaml`:
+
+```yaml
+policies:
+  max_completed_runs: 50
+```
+
+- Only runs with `state.json` and `terminated: true` are pruned.
+- In-progress runs are never auto-deleted.
+- The current run is protected from pruning.
+- You can trigger pruning anytime with `mc cleanup`.
 
 ### Inspect logs and model outputs
 
