@@ -11,6 +11,7 @@
     "prioritized_fixes",
     "acceptance_tests",
     "red_flags",
+    "workflow_checks",
     "unsure"
   ],
   "properties": {

@@ -3,7 +3,16 @@
   "$id": "implementer.output.schema.json",
   "title": "Implementer Output",
   "type": "object",
-  "required": ["meta", "status", "artifact", "change_summary", "risk_notes", "todos", "unsure"],
+  "required": [
+    "meta",
+    "status",
+    "artifact",
+    "change_summary",
+    "risk_notes",
+    "todos",
+    "progress",
+    "unsure"
+  ],
   "properties": {
     "meta": {
       "type": "object",

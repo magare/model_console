@@ -101,6 +101,40 @@ loops:
     eval_commands:
       - "echo 'live reasoning deep codex loop eval completed'"
 
+  prd_chrome_extension_20_loop:
+    artifact_kind: spec
+    max_rounds: 20
+    score_threshold: 1000
+    stagnation_rounds: 999
+    stagnation_epsilon: 0.0
+    swap_next_round: false
+    swap_on_failure: true
+    role_assignment:
+      strategy: static
+      implementers: [codex_primary]
+      reviewers: [codex_primary]
+      implementer_count: 1
+      reviewer_count: 1
+    eval_commands:
+      - "echo 'prd chrome extension loop eval completed'"
+
+  prd_chrome_extension_mock_20_loop:
+    artifact_kind: spec
+    max_rounds: 20
+    score_threshold: 1000
+    stagnation_rounds: 999
+    stagnation_epsilon: 0.0
+    swap_next_round: false
+    swap_on_failure: true
+    role_assignment:
+      strategy: static
+      implementers: [mock_impl]
+      reviewers: [mock_rev]
+      implementer_count: 1
+      reviewer_count: 1
+    eval_commands:
+      - "echo 'prd chrome extension mock loop eval completed'"
+
   complex_reasoning_loop:
     artifact_kind: spec
     max_rounds: 8

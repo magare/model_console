@@ -43,13 +43,20 @@ def main() -> None:
             },
             "status": "ok",
             "artifact": {
-                "kind": "plan",
-                "path": "artifacts/mock_artifact.md",
+                "kind": "spec",
+                "path": "artifacts/PRD_Screen_Studio_Chrome_Extension_v1.md",
                 "content": f"# Mock artifact\n\nGenerated in {round_id}.\n",
             },
             "change_summary": ["Generated deterministic mock artifact content"],
             "risk_notes": [],
             "todos": ["Replace mock provider with real CLI provider"],
+            "progress": {
+                "phase": "plan",
+                "selected_step_id": "",
+                "completed_step_ids": [],
+                "pending_step_ids": [],
+                "blocked_step_ids": [],
+            },
             "unsure": [],
         }
     else:
@@ -75,6 +82,11 @@ def main() -> None:
             ],
             "acceptance_tests": ["Artifact file exists and is non-empty"],
             "red_flags": [],
+            "workflow_checks": {
+                "dependency_ok": True,
+                "step_done_claim_ok": True,
+                "deadlock_detected": False,
+            },
             "unsure": [],
         }
 

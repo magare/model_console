@@ -186,6 +186,7 @@ class AgentExecutor:
                 "--skip-git-repo-check",
                 "--sandbox",
                 "workspace-write",
+                "--full-auto",
             ]
         elif provider == "gemini":
             command = [
