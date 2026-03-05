@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "complex.workflow.schema.json",
+  "title": "Complex Workflow Artifact",
+  "type": "object",
+  "required": [
+    "task_id",
+    "task_mode",
+    "phase",
+    "active_step_id",
+    "completed_step_ids",
+    "pending_step_ids",
+    "ready_step_ids",
+    "blocked_step_ids",
+    "current_step_attempts",
+    "integration_required",
+    "integration_done",
+    "steps",
+    "termination_reason",
+    "no_progress_rounds"
+  ],
+  "properties": {
+    "task_id": {"type": "string", "minLength": 1},
+    "round_id": {"type": "string"},
+    "task_mode": {"type": "string", "enum": ["complex"]},
+    "phase": {"type": "string", "enum": ["plan", "execute", "integrate"]},
+    "active_step_id": {"type": "string"},
+    "completed_step_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "pending_step_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "ready_step_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "blocked_step_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "current_step_attempts": {"type": "number", "minimum": 0},
+    "integration_required": {"type": "boolean"},
+    "integration_done": {"type": "boolean"},
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "depends_on", "done_when", "status"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "description": {"type": "string"},
+          "depends_on": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "done_when": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "status": {"type": "string", "enum": ["pending", "ready", "blocked", "completed"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "termination_reason": {"type": "string"},
+    "no_progress_rounds": {"type": "number", "minimum": 0}
+  },
+  "additionalProperties": false
+}

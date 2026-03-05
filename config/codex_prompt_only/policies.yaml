@@ -1,0 +1,31 @@
+policies:
+  allow_command_prefixes:
+    - claude
+    - codex
+    - gemini
+    - python3
+    - git
+    - zsh
+    - echo
+    - npm
+    - pnpm
+    - yarn
+    - pytest
+    - uv
+    - go
+    - cargo
+    - make
+  deny_command_patterns:
+    - '(^|\\s)rm\\s+-rf\\s+/'
+    - '(^|\\s)git\\s+reset\\s+--hard'
+    - '(^|\\s)git\\s+checkout\\s+--'
+    - '(^|\\s)sudo\\s+'
+    - '(^|\\s)curl\\s+.*\\|\\s*sh'
+    - '(^|\\s)dd\\s+if='
+    - '(^|\\s)mkfs\\b'
+    - '(^|\\s)shutdown\\b'
+    - '(^|\\s)reboot\\b'
+    - '(^|\\s):\\(\\)\\s*\\{\\s*:\\|:&\\s*\\};:'
+  run_timeout_seconds: 900
+  model_timeout_seconds: 300
+  max_completed_runs: 50
