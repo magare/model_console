@@ -1,0 +1,35 @@
+agents:
+  claude_primary:
+    provider: claude
+    model: claude-sonnet-4
+    cli_path: claude
+    extra_args: []
+    env: {}
+
+  codex_primary:
+    provider: codex
+    model: gpt-5.3-codex
+    cli_path: codex
+    extra_args: []
+    env: {}
+
+  gemini_primary:
+    provider: gemini
+    model: gemini-2.5-flash-lite
+    cli_path: gemini
+    extra_args: []
+    env: {}
+
+  mock_impl:
+    provider: mock
+    model: mock-implementer
+    cli_path: python3
+    extra_args: []
+    env: {}
+
+  mock_rev:
+    provider: mock
+    model: mock-reviewer
+    cli_path: python3
+    extra_args: []
+    env: {}
