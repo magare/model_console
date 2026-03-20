@@ -1,3 +1,9 @@
+"""Configuration loader.
+
+Reads agents.yaml, loops.yaml, and policies.yaml from the config directory
+and assembles them into a typed AppConfig used by the rest of the system.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

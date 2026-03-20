@@ -1,3 +1,9 @@
+"""Git helper functions.
+
+Provides branch creation, commit, diff capture, and revert operations
+used by the engine to version-control each round's workspace changes.
+"""
+
 from __future__ import annotations
 
 import subprocess

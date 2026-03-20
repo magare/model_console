@@ -1,3 +1,9 @@
+"""JSON utilities.
+
+extract_json_object() robustly pulls the first JSON object from model output
+that may contain surrounding prose or markdown fences.
+"""
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,10 @@
+"""Safety guardrails.
+
+assert_command_safe() enforces allow/deny command policies before any
+subprocess is executed.  redact_text() scrubs secrets (API keys, tokens,
+passwords) from strings before they are persisted to logs.
+"""
+
 from __future__ import annotations
 
 import re

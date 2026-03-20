@@ -1,3 +1,9 @@
+"""Mock agent for local/CI testing.
+
+Produces deterministic IMPLEMENTER or REVIEWER JSON payloads without
+calling any real AI model, allowing end-to-end loop testing offline.
+"""
+
 from __future__ import annotations
 
 import argparse

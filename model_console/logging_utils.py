@@ -1,3 +1,9 @@
+"""Logging and file-system helpers.
+
+Provides UTC timestamp generation, directory creation, JSON/JSONL writing,
+and dataclass-to-dict serialisation with automatic secret redaction.
+"""
+
 from __future__ import annotations
 
 import json

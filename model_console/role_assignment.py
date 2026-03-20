@@ -1,3 +1,10 @@
+"""Role assignment engine.
+
+Decides which agents act as implementers vs. reviewers each round.
+Supports static, round-robin, and rules-based strategies, with optional
+role-swapping on failure or per-round rotation.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

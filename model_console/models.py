@@ -1,3 +1,9 @@
+"""Shared data models (dataclasses).
+
+Defines AgentConfig, LoopConfig, Policies, AppConfig, Assignment,
+CommandResult, EvalResult, and RoundResult used across the package.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

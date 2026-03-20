@@ -1,3 +1,9 @@
+"""Prompt template helpers.
+
+Loads plain-text template files and renders them via str.format() substitution
+to build the prompts sent to implementer and reviewer agents.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

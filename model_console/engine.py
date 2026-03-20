@@ -1,3 +1,15 @@
+"""Core orchestration engine (LoopEngine).
+
+Runs iterative implement → review rounds until the artifact is accepted, scores
+stagnate, or the max-rounds cap is reached.  Features:
+  - Role assignment with static / round-robin / rules-based strategies.
+  - JSON-schema validation with one auto-retry on malformed agent output.
+  - Git branching, per-round diffs, and automatic rollback on failure.
+  - Dependency-workflow mode for complex multi-step tasks.
+  - Eval-command execution between rounds.
+  - Full event and command logging (JSONL).
+"""
+
 from __future__ import annotations
 
 import json

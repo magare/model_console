@@ -1,3 +1,9 @@
+"""Eval-command runner.
+
+Executes user-defined shell commands (e.g. linters, tests) after each round
+and reports a combined pass/fail result back to the engine.
+"""
+
 from __future__ import annotations
 
 import subprocess

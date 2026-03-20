@@ -1,3 +1,13 @@
+"""CLI interface for the `mc` command.
+
+Subcommands:
+  run    – Start a new orchestration loop (task + loop config → agent rounds).
+  resume – Resume an existing run from its persisted state.
+  status – Print the current state.json of a run.
+
+Also handles automatic pruning of old completed runs based on retention policy.
+"""
+
 from __future__ import annotations
 
 import argparse

@@ -1,3 +1,10 @@
+"""JSON schema validator.
+
+Uses jsonschema (Draft 2020-12) when available; otherwise falls back to a
+lightweight built-in checker that validates types, required fields, enums,
+const, minLength, and numeric bounds.
+"""
+
 from __future__ import annotations
 
 import json
