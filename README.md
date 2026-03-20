@@ -140,6 +140,7 @@ tail -n 100 runs/run-001/loop_live_reasoning_loop/rounds/r01/trace/conversation.
 open runs/run-001/reports/transcript_viewer.html
 
 # Round-level raw model outputs
+cat runs/run-001/loop_live_reasoning_loop/rounds/r01/raw/implementer.attempt01.last_message.txt
 cat runs/run-001/loop_live_reasoning_loop/rounds/r01/raw/implementer.last_message.txt
 cat runs/run-001/loop_live_reasoning_loop/rounds/r01/raw/reviewer.stdout.log
 
@@ -166,6 +167,7 @@ python3 -m pip uninstall -y UNKNOWN
 
 - By default, `code_loop` includes placeholder eval commands. Replace with project-specific checks.
 - Safety deny patterns block common destructive commands.
-- CLI path args are workspace-confined: `--task`, `--runs-dir`, `--config-dir`, `--schemas-dir`, and `--prompts-dir` must resolve inside `--workspace`.
+- CLI path args are workspace-confined: `--task`, `--runs-dir`, `--config-dir`, `--schemas-dir`, `--prompts-dir`, `--transcript`, and `--output` must resolve inside `--workspace`.
+- Completed runs can be pruned automatically after `mc run` and `mc resume` based on `policies.max_completed_runs`.
 - Transcript logs capture provider-exposed reasoning summaries and thinking-token counters when available. They do not synthesize hidden chain-of-thought for providers that do not expose it.
 - For deterministic runs, pin CLI versions and model IDs in your environment.

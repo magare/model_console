@@ -133,7 +133,6 @@ class AgentExecutor:
         latest_stderr_path = raw_dir / f"{role.lower()}.stderr.log"
         self._write_attempt_file(stdout_path, latest_stdout_path, proc.stdout)
         self._write_attempt_file(stderr_path, latest_stderr_path, proc.stderr)
-        self._sync_last_message_alias(last_message_path, latest_last_message_path)
 
         provider_trace = extract_provider_trace(
             agent.provider,
@@ -144,6 +143,7 @@ class AgentExecutor:
         if not provider_trace.final_text and fallback_output_text:
             provider_trace.final_text = fallback_output_text
         output_text = provider_trace.final_text or fallback_output_text
+        self._write_attempt_file(last_message_path, latest_last_message_path, output_text)
         trace_path = trace_dir / f"{role.lower()}.attempt{attempt_index:02d}.provider_trace.json"
         latest_trace_path = trace_dir / f"{role.lower()}.provider_trace.json"
         write_json(trace_path, provider_trace)
@@ -386,7 +386,3 @@ class AgentExecutor:
     def _write_attempt_file(self, attempt_path: Path, latest_path: Path, content: str) -> None:
         attempt_path.write_text(content, encoding="utf-8")
         latest_path.write_text(content, encoding="utf-8")
-
-    def _sync_last_message_alias(self, attempt_path: Path, latest_path: Path) -> None:
-        if attempt_path.exists():
-            latest_path.write_text(attempt_path.read_text(encoding="utf-8"), encoding="utf-8")

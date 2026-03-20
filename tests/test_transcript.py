@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from model_console.engine import LoopEngine
+from model_console.engine import LoopEngine, _default_rubric
 from model_console.executors import AgentExecutor
 from model_console.models import (
     AgentConfig,
@@ -185,6 +185,8 @@ class TranscriptIntegrationTests(unittest.TestCase):
 
             self.assertTrue((round_dir / "prompts" / "implementer.attempt01.prompt.txt").exists())
             self.assertTrue((round_dir / "prompts" / "implementer.attempt02.prompt.txt").exists())
+            self.assertTrue((round_dir / "raw" / "implementer.attempt01.last_message.txt").exists())
+            self.assertTrue((round_dir / "raw" / "implementer.attempt02.last_message.txt").exists())
             self.assertTrue((round_dir / "raw" / "implementer.attempt01.stdout.log").exists())
             self.assertTrue((round_dir / "raw" / "implementer.attempt02.stdout.log").exists())
             self.assertTrue((round_dir / "trace" / "implementer.attempt01.provider_trace.json").exists())
@@ -192,7 +194,14 @@ class TranscriptIntegrationTests(unittest.TestCase):
             latest_prompt = (round_dir / "prompts" / "implementer.prompt.txt").read_text(
                 encoding="utf-8"
             )
+            latest_last_message = (round_dir / "raw" / "implementer.last_message.txt").read_text(
+                encoding="utf-8"
+            )
+            attempt_two_last_message = (
+                round_dir / "raw" / "implementer.attempt02.last_message.txt"
+            ).read_text(encoding="utf-8")
             self.assertEqual(latest_prompt, prompt + " Retry.")
+            self.assertEqual(latest_last_message, attempt_two_last_message)
 
     def test_loop_run_writes_cross_model_transcript(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -248,6 +257,14 @@ class TranscriptIntegrationTests(unittest.TestCase):
                 / "implementer.provider_trace.json"
             )
             self.assertTrue(provider_trace.exists())
+
+
+class RubricSelectionTests(unittest.TestCase):
+    def test_prompt_loop_uses_prompt_specific_rubric(self) -> None:
+        self.assertEqual(
+            _default_rubric("prompt_loop"),
+            "Completeness(30), Sequencing(25), Risks(25), Verifiability(20).",
+        )
 
 
 if __name__ == "__main__":

@@ -1281,6 +1281,6 @@ def _default_rubric(loop_id: str) -> str:
             "Dependency integrity(30), Step completion validity(25), Integration quality(20),"
             " Task adherence(15), Hallucination resistance(10)."
         )
-    if loop_id == "plan_loop":
+    if loop_id == "prompt_loop":
         return "Completeness(30), Sequencing(25), Risks(25), Verifiability(20)."
     return "Task adherence(40), Clarity(30), Hallucination resistance(30)."
