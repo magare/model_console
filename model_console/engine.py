@@ -35,6 +35,7 @@ from .logging_utils import append_jsonl, ensure_dir, utc_now_iso, write_json
 from .models import AppConfig, Assignment, LoopConfig, RoundResult
 from .prompts import load_template, render_template
 from .role_assignment import AssignmentContext, RoleAssignmentEngine
+from .transcript import append_transcript_entry
 from .validator import validate_with_schema
 
 
@@ -69,9 +70,14 @@ class LoopEngine:
         self.state_file = self.run_dir / "state.json"
         self.events_log = self.logs_dir / "events.jsonl"
         self.commands_log = self.logs_dir / "commands.jsonl"
+        self.transcript_log = self.logs_dir / "transcript.jsonl"
 
         self.executor = AgentExecutor(
-            app_cfg, self.events_log, self.commands_log, event_handler=event_handler
+            app_cfg,
+            self.events_log,
+            self.commands_log,
+            transcript_log=self.transcript_log,
+            event_handler=event_handler,
         )
         self.role_engine = RoleAssignmentEngine(self.loop_cfg)
 
@@ -405,6 +411,21 @@ class LoopEngine:
 
         if len(assignment.reviewers) > 0 and (len(impl_outputs) == 1):
             for reviewer_id in assignment.reviewers:
+                self._append_transcript(
+                    round_dir,
+                    {
+                        "timestamp": utc_now_iso(),
+                        "event": "artifact_handoff",
+                        "run_id": self.run_id,
+                        "loop_id": self.loop_cfg.loop_id,
+                        "round_id": round_id,
+                        "speaker": assignment.implementers[0],
+                        "recipient": reviewer_id,
+                        "role": "REVIEWER",
+                        "artifact_path": selected_impl.get("artifact", {}).get("path", ""),
+                        "text": "Orchestrator forwarded the latest implementer artifact for review.",
+                    },
+                )
                 review_output = self._review_artifact(
                     reviewer_id=reviewer_id,
                     round_id=round_id,
@@ -501,18 +522,50 @@ class LoopEngine:
         round_dir: Path,
     ) -> dict[str, Any]:
         agent = self.app_cfg.agents[agent_id]
-        output, _ = self.executor.run_role(agent, role, prompt, schema_path, round_dir)
+        output, _ = self.executor.run_role(
+            agent,
+            run_id=self.run_id,
+            loop_id=self.loop_cfg.loop_id,
+            role=role,
+            prompt=prompt,
+            schema_path=schema_path,
+            round_dir=round_dir,
+            attempt_index=1,
+        )
         errors = validate_with_schema(schema_path, output)
         if not errors:
             return output
 
+        self._append_transcript(
+            round_dir,
+            {
+                "timestamp": utc_now_iso(),
+                "event": "schema_repair_requested",
+                "run_id": self.run_id,
+                "loop_id": self.loop_cfg.loop_id,
+                "round_id": round_dir.name,
+                "speaker": "orchestrator",
+                "recipient": agent_id,
+                "role": role,
+                "text": "\n".join(errors),
+            },
+        )
         repair_prompt = (
             prompt
             + "\n\nYour last response failed JSON schema validation with these errors:\n"
             + "\n".join(f"- {e}" for e in errors)
             + "\nReturn valid JSON only, no markdown."
         )
-        output, _ = self.executor.run_role(agent, role, repair_prompt, schema_path, round_dir)
+        output, _ = self.executor.run_role(
+            agent,
+            run_id=self.run_id,
+            loop_id=self.loop_cfg.loop_id,
+            role=role,
+            prompt=repair_prompt,
+            schema_path=schema_path,
+            round_dir=round_dir,
+            attempt_index=2,
+        )
         errors = validate_with_schema(schema_path, output)
         if errors:
             raise RuntimeError(f"{role} output invalid after retry: {errors}")
@@ -1033,6 +1086,9 @@ class LoopEngine:
     def _emit(self, event: dict[str, Any]) -> None:
         if self.event_handler is not None:
             self.event_handler(event)
+
+    def _append_transcript(self, round_dir: Path, payload: dict[str, Any]) -> None:
+        append_transcript_entry(self.transcript_log, round_dir, payload)
 
 
 def _extract_complex_task_spec(task_text: str) -> dict[str, Any] | None:

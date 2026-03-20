@@ -58,7 +58,7 @@ class AgentExecutor:
         latest_prompt_path = prompts_dir / f"{role.lower()}.prompt.txt"
         self._write_attempt_file(prompt_path, latest_prompt_path, prompt)
 
-        last_message_path = trace_dir / f"{role.lower()}.attempt{attempt_index:02d}.last_message.txt"
+        last_message_path = raw_dir / f"{role.lower()}.attempt{attempt_index:02d}.last_message.txt"
         latest_last_message_path = raw_dir / f"{role.lower()}.last_message.txt"
 
         command = self._build_command(
@@ -135,13 +135,15 @@ class AgentExecutor:
         self._write_attempt_file(stderr_path, latest_stderr_path, proc.stderr)
         self._sync_last_message_alias(last_message_path, latest_last_message_path)
 
-        output_text = self._select_output_text(agent, proc.stdout, last_message_path)
         provider_trace = extract_provider_trace(
             agent.provider,
             proc.stdout,
             stderr=proc.stderr,
-            final_text_override=output_text,
         )
+        fallback_output_text = self._select_output_text(agent, proc.stdout, last_message_path)
+        if not provider_trace.final_text and fallback_output_text:
+            provider_trace.final_text = fallback_output_text
+        output_text = provider_trace.final_text or fallback_output_text
         trace_path = trace_dir / f"{role.lower()}.attempt{attempt_index:02d}.provider_trace.json"
         latest_trace_path = trace_dir / f"{role.lower()}.provider_trace.json"
         write_json(trace_path, provider_trace)

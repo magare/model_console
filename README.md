@@ -8,6 +8,7 @@ Local-first orchestration runner for iterative IMPLEMENTER/REVIEWER loops, with 
 - Round-based orchestration with optional role swaps
 - Strict JSON schema validation for both roles
 - Per-run logs, prompts, raw outputs, parsed outputs, and reports
+- Structured transcripts for orchestrator prompts, model replies, reviewer handoffs, and provider-emitted reasoning signals
 - Safety policy (allowlist + deny patterns)
 - Git branch-per-run and commit-per-round with rollback via `git revert`
 - Resume support (`mc resume --run-id ...`)
@@ -117,9 +118,17 @@ find runs -maxdepth 2 -name state.json | sort
 tail -n 100 runs/run-001/logs/events.jsonl
 tail -n 100 runs/run-001/logs/commands.jsonl
 
+# Normalized orchestration transcript
+tail -n 100 runs/run-001/logs/transcript.jsonl
+tail -n 100 runs/run-001/loop_live_reasoning_loop/rounds/r01/trace/conversation.jsonl
+
 # Round-level raw model outputs
 cat runs/run-001/loop_live_reasoning_loop/rounds/r01/raw/implementer.last_message.txt
 cat runs/run-001/loop_live_reasoning_loop/rounds/r01/raw/reviewer.stdout.log
+
+# Provider trace summary per attempt
+cat runs/run-001/loop_live_reasoning_loop/rounds/r01/trace/implementer.provider_trace.json
+cat runs/run-001/loop_live_reasoning_loop/rounds/r01/trace/reviewer.provider_trace.json
 ```
 
 ### Optional cleanup for broken old installs
@@ -141,4 +150,5 @@ python3 -m pip uninstall -y UNKNOWN
 - By default, `code_loop` includes placeholder eval commands. Replace with project-specific checks.
 - Safety deny patterns block common destructive commands.
 - CLI path args are workspace-confined: `--task`, `--runs-dir`, `--config-dir`, `--schemas-dir`, and `--prompts-dir` must resolve inside `--workspace`.
+- Transcript logs capture provider-exposed reasoning summaries and thinking-token counters when available. They do not synthesize hidden chain-of-thought for providers that do not expose it.
 - For deterministic runs, pin CLI versions and model IDs in your environment.
