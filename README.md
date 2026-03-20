@@ -42,6 +42,7 @@ mc --help
 mc run --help
 mc resume --help
 mc status --help
+mc transcript --help
 ```
 
 ### Check model CLIs
@@ -104,6 +105,19 @@ mc status --run-id run-001
 mc resume --run-id run-001
 ```
 
+### Transcript Viewer
+
+```bash
+# Render a transcript viewer for a run
+mc transcript --run-id run-001
+
+# Render a viewer for any transcript JSONL inside the workspace
+mc transcript --transcript runs/run-001/loop_live_reasoning_loop/rounds/r01/trace/conversation.jsonl
+
+# Choose an explicit output path and open it
+mc transcript --run-id run-001 --output runs/run-001/reports/custom_transcript.html --open
+```
+
 ### Find available run IDs
 
 ```bash
@@ -121,6 +135,9 @@ tail -n 100 runs/run-001/logs/commands.jsonl
 # Normalized orchestration transcript
 tail -n 100 runs/run-001/logs/transcript.jsonl
 tail -n 100 runs/run-001/loop_live_reasoning_loop/rounds/r01/trace/conversation.jsonl
+
+# Generated HTML viewer
+open runs/run-001/reports/transcript_viewer.html
 
 # Round-level raw model outputs
 cat runs/run-001/loop_live_reasoning_loop/rounds/r01/raw/implementer.last_message.txt

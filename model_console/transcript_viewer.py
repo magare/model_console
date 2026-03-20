@@ -1,0 +1,844 @@
+from __future__ import annotations
+
+import json
+import webbrowser
+from collections import Counter
+from html import escape
+from pathlib import Path
+from typing import Any
+
+from .logging_utils import ensure_dir
+
+
+def load_transcript_entries(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        raise FileNotFoundError(f"Transcript not found: {path}")
+
+    entries: list[dict[str, Any]] = []
+    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSONL in {path} at line {line_number}") from exc
+        if not isinstance(payload, dict):
+            raise ValueError(f"Transcript entry must be a JSON object: {path} line {line_number}")
+        entries.append(payload)
+    return entries
+
+
+def default_viewer_output_path(transcript_path: Path) -> Path:
+    if transcript_path.name == "transcript.jsonl" and transcript_path.parent.name == "logs":
+        return transcript_path.parent.parent / "reports" / "transcript_viewer.html"
+    return transcript_path.with_name(f"{transcript_path.stem}.viewer.html")
+
+
+def write_transcript_viewer(
+    transcript_path: Path,
+    output_path: Path,
+    *,
+    open_browser: bool = False,
+) -> dict[str, Any]:
+    entries = load_transcript_entries(transcript_path)
+    html = render_transcript_html(entries, transcript_path)
+    ensure_dir(output_path.parent)
+    output_path.write_text(html, encoding="utf-8")
+    if open_browser:
+        webbrowser.open(output_path.resolve().as_uri())
+    return {
+        "transcript_path": str(transcript_path),
+        "output_path": str(output_path),
+        "events": len(entries),
+    }
+
+
+def render_transcript_html(entries: list[dict[str, Any]], transcript_path: Path) -> str:
+    summary = _build_summary(entries, transcript_path)
+    payload = _script_safe_json({"summary": summary, "entries": entries})
+    title = escape(_viewer_title(summary))
+    source_label = escape(summary["source_label"])
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+  <style>
+    :root {{
+      --bg: oklch(0.96 0.015 80);
+      --bg-strong: oklch(0.92 0.03 80);
+      --surface: rgba(255, 250, 242, 0.86);
+      --surface-strong: rgba(255, 248, 235, 0.96);
+      --line: oklch(0.79 0.045 55);
+      --ink: oklch(0.23 0.04 35);
+      --muted: oklch(0.45 0.02 45);
+      --accent: oklch(0.57 0.18 32);
+      --accent-soft: oklch(0.92 0.05 32);
+      --accent-2: oklch(0.66 0.16 82);
+      --prompt: oklch(0.91 0.04 24);
+      --response: oklch(0.92 0.035 150);
+      --thinking: oklch(0.94 0.03 260);
+      --handoff: oklch(0.93 0.05 90);
+      --repair: oklch(0.92 0.05 15);
+      --shadow: 0 18px 60px rgba(69, 39, 18, 0.12);
+      --radius: 22px;
+      --radius-sm: 14px;
+      --ui-font: "Avenir Next", "Segoe UI", "Trebuchet MS", sans-serif;
+      --display-font: "Iowan Old Style", "Baskerville", "Palatino Linotype", serif;
+      color-scheme: light;
+    }}
+
+    * {{ box-sizing: border-box; }}
+
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(212, 76, 58, 0.18), transparent 36%),
+        radial-gradient(circle at 85% 20%, rgba(213, 163, 73, 0.16), transparent 34%),
+        linear-gradient(180deg, #f7f0e6 0%, #f3eadf 46%, #efe7dc 100%);
+      font-family: var(--ui-font);
+    }}
+
+    body::before {{
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(109, 69, 39, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(109, 69, 39, 0.03) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.1));
+    }}
+
+    .shell {{
+      width: min(1480px, calc(100vw - 40px));
+      margin: 24px auto 40px;
+      position: relative;
+    }}
+
+    .hero {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr);
+      gap: 18px;
+      margin-bottom: 18px;
+    }}
+
+    .hero-card,
+    .panel,
+    .event-card {{
+      background: var(--surface);
+      border: 1px solid rgba(127, 79, 49, 0.14);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }}
+
+    .hero-card {{
+      border-radius: calc(var(--radius) + 6px);
+      padding: clamp(24px, 4vw, 42px);
+      position: relative;
+      overflow: hidden;
+    }}
+
+    .hero-card::after {{
+      content: "";
+      position: absolute;
+      inset: auto -12% -30% auto;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(214, 81, 61, 0.18), transparent 70%);
+      transform: translate3d(0, 0, 0);
+    }}
+
+    .eyebrow {{
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }}
+
+    h1 {{
+      margin: 0;
+      font-family: var(--display-font);
+      font-size: clamp(2.4rem, 4vw, 4.5rem);
+      line-height: 0.92;
+      letter-spacing: -0.04em;
+      max-width: 12ch;
+    }}
+
+    .hero-copy {{
+      margin: 18px 0 0;
+      max-width: 52ch;
+      color: color-mix(in oklch, var(--ink) 82%, transparent);
+      font-size: 1rem;
+      line-height: 1.65;
+    }}
+
+    .source-label {{
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 18px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 250, 245, 0.82);
+      border: 1px solid rgba(127, 79, 49, 0.12);
+      color: var(--muted);
+      font-size: 0.92rem;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }}
+
+    .hero-stats {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      align-content: start;
+    }}
+
+    .stat {{
+      border-radius: var(--radius);
+      padding: 18px;
+      background: var(--surface-strong);
+      border: 1px solid rgba(127, 79, 49, 0.14);
+    }}
+
+    .stat-label {{
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }}
+
+    .stat-value {{
+      font-family: var(--display-font);
+      font-size: clamp(1.4rem, 2.6vw, 2.2rem);
+      line-height: 1;
+    }}
+
+    .controls {{
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) repeat(3, minmax(160px, 1fr)) auto;
+      gap: 12px;
+      padding: 14px;
+      border-radius: var(--radius);
+      margin-bottom: 18px;
+      background: rgba(255, 248, 238, 0.74);
+      border: 1px solid rgba(127, 79, 49, 0.12);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 12px;
+      z-index: 10;
+      backdrop-filter: blur(14px);
+    }}
+
+    .field {{
+      display: grid;
+      gap: 8px;
+    }}
+
+    .field label {{
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+    }}
+
+    .field input,
+    .field select {{
+      width: 100%;
+      appearance: none;
+      border: 1px solid rgba(127, 79, 49, 0.18);
+      border-radius: 14px;
+      padding: 14px 16px;
+      font: inherit;
+      color: var(--ink);
+      background: rgba(255, 252, 247, 0.88);
+    }}
+
+    .toggle {{
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      align-self: end;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(127, 79, 49, 0.18);
+      background: rgba(255, 252, 247, 0.88);
+      white-space: nowrap;
+    }}
+
+    .layout {{
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }}
+
+    .panel {{
+      border-radius: var(--radius);
+      padding: 20px;
+      position: sticky;
+      top: 110px;
+    }}
+
+    .panel h2 {{
+      margin: 0 0 10px;
+      font-family: var(--display-font);
+      font-size: 1.4rem;
+    }}
+
+    .panel-copy {{
+      color: var(--muted);
+      margin: 0 0 18px;
+      line-height: 1.6;
+    }}
+
+    .chip-grid {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }}
+
+    .chip {{
+      border: 1px solid rgba(127, 79, 49, 0.18);
+      background: rgba(255, 252, 247, 0.88);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+    }}
+
+    .chip:hover {{
+      transform: translateY(-1px);
+    }}
+
+    .chip.active {{
+      background: var(--accent-soft);
+      border-color: color-mix(in oklch, var(--accent) 45%, white);
+    }}
+
+    .chip-count {{
+      color: var(--muted);
+      margin-left: 8px;
+      font-size: 0.82rem;
+    }}
+
+    .mini-list {{
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }}
+
+    .mini-row {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed rgba(127, 79, 49, 0.18);
+      color: var(--muted);
+    }}
+
+    .timeline {{
+      display: grid;
+      gap: 14px;
+    }}
+
+    .event-card {{
+      border-radius: var(--radius);
+      padding: 18px 18px 16px;
+      position: relative;
+      overflow: hidden;
+    }}
+
+    .event-card::before {{
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 8px;
+      background: var(--event-tone, var(--accent));
+    }}
+
+    .event-top {{
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 12px;
+    }}
+
+    .event-route {{
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.25;
+    }}
+
+    .event-time {{
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }}
+
+    .badge-row {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }}
+
+    .badge {{
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 252, 247, 0.9);
+      border: 1px solid rgba(127, 79, 49, 0.14);
+      font-size: 0.84rem;
+      color: var(--muted);
+    }}
+
+    .event-summary {{
+      color: color-mix(in oklch, var(--ink) 76%, white 24%);
+      line-height: 1.62;
+      margin: 0 0 12px;
+    }}
+
+    details {{
+      border-radius: var(--radius-sm);
+      background: rgba(255, 252, 247, 0.72);
+      border: 1px solid rgba(127, 79, 49, 0.12);
+      overflow: hidden;
+    }}
+
+    summary {{
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }}
+
+    summary::-webkit-details-marker {{
+      display: none;
+    }}
+
+    .body {{
+      margin: 0;
+      padding: 0 16px 16px;
+      font-family: "SF Mono", "Monaco", "Menlo", monospace;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: color-mix(in oklch, var(--ink) 88%, black 12%);
+    }}
+
+    .body.nowrap {{
+      white-space: pre;
+      overflow-x: auto;
+    }}
+
+    .empty {{
+      padding: 46px 24px;
+      border-radius: var(--radius);
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255, 252, 247, 0.72);
+      border: 1px dashed rgba(127, 79, 49, 0.22);
+    }}
+
+    @media (max-width: 1060px) {{
+      .hero,
+      .layout {{
+        grid-template-columns: 1fr;
+      }}
+
+      .controls {{
+        grid-template-columns: 1fr 1fr;
+      }}
+
+      .panel {{
+        position: static;
+      }}
+    }}
+
+    @media (max-width: 720px) {{
+      .shell {{
+        width: min(100vw - 18px, 1480px);
+        margin: 10px auto 28px;
+      }}
+
+      .controls {{
+        grid-template-columns: 1fr;
+        top: 8px;
+      }}
+
+      .hero-stats {{
+        grid-template-columns: 1fr 1fr;
+      }}
+
+      .event-top {{
+        flex-direction: column;
+      }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-card">
+        <div class="eyebrow">Transcript Viewer</div>
+        <h1>{title}</h1>
+        <p class="hero-copy">Readable orchestration history for prompts, replies, handoffs, and provider-exposed thinking signals. Filter by event, speaker, role, round, or free-text search without touching the raw JSONL.</p>
+        <div class="source-label" title="{source_label}">{source_label}</div>
+      </div>
+      <div class="hero-stats" id="hero-stats"></div>
+    </section>
+
+    <section class="controls">
+      <div class="field">
+        <label for="search">Search</label>
+        <input id="search" type="search" placeholder="Search prompt text, speakers, event names, JSON payloads">
+      </div>
+      <div class="field">
+        <label for="round-filter">Round</label>
+        <select id="round-filter"></select>
+      </div>
+      <div class="field">
+        <label for="role-filter">Role</label>
+        <select id="role-filter"></select>
+      </div>
+      <div class="field">
+        <label for="speaker-filter">Speaker</label>
+        <select id="speaker-filter"></select>
+      </div>
+      <label class="toggle">
+        <input id="wrap-toggle" type="checkbox" checked>
+        Wrap payloads
+      </label>
+    </section>
+
+    <section class="layout">
+      <aside class="panel">
+        <h2>Event Filters</h2>
+        <p class="panel-copy">Use the chips to declutter long sessions. Prompt traffic, reviewer handoffs, thinking signals, and repair cycles can be isolated instantly.</p>
+        <div class="chip-grid" id="event-chips"></div>
+        <div class="mini-list" id="summary-list"></div>
+      </aside>
+      <main class="timeline" id="timeline"></main>
+    </section>
+  </div>
+
+  <script>
+    const VIEW_MODEL = {payload};
+    const state = {{
+      search: "",
+      selectedRound: "all",
+      selectedRole: "all",
+      selectedSpeaker: "all",
+      wrap: true,
+      enabledEvents: new Set(Object.keys(VIEW_MODEL.summary.event_counts)),
+    }};
+
+    const toneMap = {{
+      prompt_sent: "var(--prompt)",
+      model_response: "var(--response)",
+      thinking_emitted: "var(--thinking)",
+      thinking_tokens_reported: "var(--thinking)",
+      artifact_handoff: "var(--handoff)",
+      schema_repair_requested: "var(--repair)",
+    }};
+
+    const searchInput = document.getElementById("search");
+    const roundFilter = document.getElementById("round-filter");
+    const roleFilter = document.getElementById("role-filter");
+    const speakerFilter = document.getElementById("speaker-filter");
+    const wrapToggle = document.getElementById("wrap-toggle");
+    const eventChips = document.getElementById("event-chips");
+    const timeline = document.getElementById("timeline");
+    const heroStats = document.getElementById("hero-stats");
+    const summaryList = document.getElementById("summary-list");
+
+    init();
+
+    function init() {{
+      renderHeroStats();
+      renderSelect(roundFilter, ["all", ...VIEW_MODEL.summary.rounds], "All rounds");
+      renderSelect(roleFilter, ["all", ...VIEW_MODEL.summary.roles], "All roles");
+      renderSelect(speakerFilter, ["all", ...VIEW_MODEL.summary.speakers], "All speakers");
+      renderEventChips();
+      renderSummaryList();
+      bindEvents();
+      renderTimeline();
+    }}
+
+    function bindEvents() {{
+      searchInput.addEventListener("input", (event) => {{
+        state.search = event.target.value.toLowerCase();
+        renderTimeline();
+      }});
+      roundFilter.addEventListener("change", (event) => {{
+        state.selectedRound = event.target.value;
+        renderTimeline();
+      }});
+      roleFilter.addEventListener("change", (event) => {{
+        state.selectedRole = event.target.value;
+        renderTimeline();
+      }});
+      speakerFilter.addEventListener("change", (event) => {{
+        state.selectedSpeaker = event.target.value;
+        renderTimeline();
+      }});
+      wrapToggle.addEventListener("change", (event) => {{
+        state.wrap = event.target.checked;
+        renderTimeline();
+      }});
+    }}
+
+    function renderSelect(element, options, allLabel) {{
+      element.innerHTML = options.map((value) => {{
+        const label = value === "all" ? allLabel : value;
+        return `<option value="${{escapeHtml(value)}}">${{escapeHtml(label)}}</option>`;
+      }}).join("");
+    }}
+
+    function renderHeroStats() {{
+      const stats = [
+        ["Events", String(VIEW_MODEL.summary.total_events)],
+        ["Rounds", VIEW_MODEL.summary.rounds.length ? VIEW_MODEL.summary.rounds.join(", ") : "n/a"],
+        ["Run", VIEW_MODEL.summary.run_ids.join(", ") || "n/a"],
+        ["Loop", VIEW_MODEL.summary.loop_ids.join(", ") || "n/a"],
+      ];
+      heroStats.innerHTML = stats.map(([label, value]) => `
+        <div class="stat">
+          <div class="stat-label">${{escapeHtml(label)}}</div>
+          <div class="stat-value">${{escapeHtml(value)}}</div>
+        </div>
+      `).join("");
+    }}
+
+    function renderSummaryList() {{
+      const rows = [
+        ["First event", VIEW_MODEL.summary.started_at || "n/a"],
+        ["Last event", VIEW_MODEL.summary.finished_at || "n/a"],
+        ["Speakers", String(VIEW_MODEL.summary.speakers.length)],
+        ["Event types", String(Object.keys(VIEW_MODEL.summary.event_counts).length)],
+      ];
+      summaryList.innerHTML = rows.map(([label, value]) => `
+        <div class="mini-row">
+          <span>${{escapeHtml(label)}}</span>
+          <strong>${{escapeHtml(value)}}</strong>
+        </div>
+      `).join("");
+    }}
+
+    function renderEventChips() {{
+      const entries = Object.entries(VIEW_MODEL.summary.event_counts);
+      eventChips.innerHTML = entries.map(([eventName, count]) => `
+        <button type="button" class="chip active" data-event="${{escapeHtml(eventName)}}">
+          ${{escapeHtml(eventName)}}
+          <span class="chip-count">${{count}}</span>
+        </button>
+      `).join("");
+      eventChips.querySelectorAll(".chip").forEach((chip) => {{
+        chip.addEventListener("click", () => {{
+          const eventName = chip.dataset.event;
+          if (!eventName) {{
+            return;
+          }}
+          if (state.enabledEvents.has(eventName)) {{
+            state.enabledEvents.delete(eventName);
+            chip.classList.remove("active");
+          }} else {{
+            state.enabledEvents.add(eventName);
+            chip.classList.add("active");
+          }}
+          renderTimeline();
+        }});
+      }});
+    }}
+
+    function renderTimeline() {{
+      const filtered = VIEW_MODEL.entries.filter(matchesFilter);
+      if (!filtered.length) {{
+        timeline.innerHTML = `<section class="empty">No events match the current filters.</section>`;
+        return;
+      }}
+      timeline.innerHTML = filtered.map(renderCard).join("");
+    }}
+
+    function matchesFilter(entry) {{
+      if (!state.enabledEvents.has(String(entry.event || ""))) {{
+        return false;
+      }}
+      if (state.selectedRound !== "all" && String(entry.round_id || "") !== state.selectedRound) {{
+        return false;
+      }}
+      if (state.selectedRole !== "all" && String(entry.role || "") !== state.selectedRole) {{
+        return false;
+      }}
+      if (state.selectedSpeaker !== "all" && String(entry.speaker || "") !== state.selectedSpeaker) {{
+        return false;
+      }}
+      if (!state.search) {{
+        return true;
+      }}
+      const haystack = JSON.stringify(entry).toLowerCase();
+      return haystack.includes(state.search);
+    }}
+
+    function renderCard(entry) {{
+      const tone = toneMap[entry.event] || "var(--accent)";
+      const body = formatBody(entry.text);
+      const preview = body ? body.split("\\n").slice(0, 4).join(" ").trim().slice(0, 240) : "";
+      const shouldOpen = body.length > 0 && body.length < 420 && entry.event !== "prompt_sent";
+      const badges = [
+        entry.event,
+        entry.role,
+        entry.provider,
+        entry.model,
+        entry.round_id,
+        entry.attempt_index ? `attempt ${{entry.attempt_index}}` : "",
+        entry.artifact_path || "",
+      ].filter(Boolean).map((item) => `<span class="badge">${{escapeHtml(String(item))}}</span>`).join("");
+      const route = `${{entry.speaker || "unknown"}} → ${{entry.recipient || "unknown"}}`;
+      const bodyHtml = body
+        ? `
+          <details ${{shouldOpen ? "open" : ""}}>
+            <summary>
+              <span>${{escapeHtml(preview || "Show payload")}}</span>
+              <span>${{body.length.toLocaleString()}} chars</span>
+            </summary>
+            <pre class="body ${{state.wrap ? "" : "nowrap"}}">${{escapeHtml(body)}}</pre>
+          </details>
+        `
+        : "";
+      return `
+        <article class="event-card" style="--event-tone:${{tone}}">
+          <div class="event-top">
+            <div>
+              <div class="event-route">${{escapeHtml(route)}}</div>
+              <div class="badge-row">${{badges}}</div>
+            </div>
+            <div class="event-time">${{escapeHtml(formatTimestamp(entry.timestamp))}}</div>
+          </div>
+          ${{body ? `<p class="event-summary">${{escapeHtml(preview || body.slice(0, 180))}}</p>` : ""}}
+          ${{bodyHtml}}
+        </article>
+      `;
+    }}
+
+    function formatBody(text) {{
+      if (typeof text !== "string" || !text.trim()) {{
+        return "";
+      }}
+      const trimmed = text.trim();
+      try {{
+        return JSON.stringify(JSON.parse(trimmed), null, 2);
+      }} catch (_err) {{
+        return trimmed;
+      }}
+    }}
+
+    function formatTimestamp(raw) {{
+      if (!raw) {{
+        return "timestamp unavailable";
+      }}
+      const date = new Date(raw);
+      if (Number.isNaN(date.getTime())) {{
+        return String(raw);
+      }}
+      return date.toLocaleString();
+    }}
+
+    function escapeHtml(value) {{
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }}
+  </script>
+</body>
+</html>
+"""
+
+
+def _build_summary(entries: list[dict[str, Any]], transcript_path: Path) -> dict[str, Any]:
+    event_counts = Counter()
+    rounds: set[str] = set()
+    roles: set[str] = set()
+    speakers: set[str] = set()
+    run_ids: set[str] = set()
+    loop_ids: set[str] = set()
+    timestamps: list[str] = []
+
+    for entry in entries:
+        event_name = _string_value(entry.get("event"))
+        if event_name:
+            event_counts[event_name] += 1
+        round_id = _string_value(entry.get("round_id"))
+        if round_id:
+            rounds.add(round_id)
+        role = _string_value(entry.get("role"))
+        if role:
+            roles.add(role)
+        speaker = _string_value(entry.get("speaker"))
+        if speaker:
+            speakers.add(speaker)
+        run_id = _string_value(entry.get("run_id"))
+        if run_id:
+            run_ids.add(run_id)
+        loop_id = _string_value(entry.get("loop_id"))
+        if loop_id:
+            loop_ids.add(loop_id)
+        timestamp = _string_value(entry.get("timestamp"))
+        if timestamp:
+            timestamps.append(timestamp)
+
+    return {
+        "source_label": str(transcript_path),
+        "total_events": len(entries),
+        "event_counts": dict(sorted(event_counts.items())),
+        "rounds": sorted(rounds),
+        "roles": sorted(roles),
+        "speakers": sorted(speakers),
+        "run_ids": sorted(run_ids),
+        "loop_ids": sorted(loop_ids),
+        "started_at": timestamps[0] if timestamps else "",
+        "finished_at": timestamps[-1] if timestamps else "",
+    }
+
+
+def _viewer_title(summary: dict[str, Any]) -> str:
+    run_ids = summary.get("run_ids") or []
+    loop_ids = summary.get("loop_ids") or []
+    if run_ids and loop_ids:
+        return f"{run_ids[0]} / {loop_ids[0]}"
+    if run_ids:
+        return str(run_ids[0])
+    if loop_ids:
+        return str(loop_ids[0])
+    return "Transcript Atlas"
+
+
+def _script_safe_json(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
+
+
+def _string_value(value: Any) -> str:
+    return str(value) if isinstance(value, str) and value else ""

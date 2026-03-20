@@ -4,6 +4,7 @@ Subcommands:
   run    – Start a new orchestration loop (task + loop config → agent rounds).
   resume – Resume an existing run from its persisted state.
   status – Print the current state.json of a run.
+  transcript – Render a readable HTML viewer for a transcript JSONL file.
 
 Also handles automatic pruning of old completed runs based on retention policy.
 """
@@ -20,6 +21,7 @@ from typing import Any
 
 from .config import load_app_config
 from .engine import LoopEngine
+from .transcript_viewer import default_viewer_output_path, write_transcript_viewer
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -60,6 +62,20 @@ def build_parser() -> argparse.ArgumentParser:
     status_p.add_argument("--run-id", required=True, help="Run id under runs/")
     status_p.add_argument("--workspace", default=".", help="Workspace root")
     status_p.add_argument("--runs-dir", default="runs", help="Runs directory")
+
+    transcript_p = sub.add_parser("transcript", help="Render a readable transcript viewer")
+    transcript_group = transcript_p.add_mutually_exclusive_group(required=True)
+    transcript_group.add_argument("--run-id", help="Run id under runs/")
+    transcript_group.add_argument("--transcript", help="Transcript JSONL path")
+    transcript_p.add_argument("--workspace", default=".", help="Workspace root")
+    transcript_p.add_argument("--runs-dir", default="runs", help="Runs directory")
+    transcript_p.add_argument("--output", help="HTML output path")
+    transcript_p.add_argument(
+        "--open",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Open the generated HTML viewer in the default browser",
+    )
 
     return parser
 
@@ -157,6 +173,33 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_transcript(args: argparse.Namespace) -> int:
+    workspace = Path(args.workspace).resolve()
+    runs_dir = _resolve_within_workspace(workspace, args.runs_dir, "--runs-dir")
+
+    if args.transcript:
+        transcript_path = _resolve_within_workspace(workspace, args.transcript, "--transcript")
+    else:
+        run_dir = _resolve_run_dir(runs_dir, args.run_id)
+        transcript_path = run_dir / "logs" / "transcript.jsonl"
+
+    if not transcript_path.exists():
+        raise FileNotFoundError(f"Transcript not found: {transcript_path}")
+
+    if args.output:
+        output_path = _resolve_within_workspace(workspace, args.output, "--output")
+    else:
+        output_path = default_viewer_output_path(transcript_path)
+
+    result = write_transcript_viewer(
+        transcript_path=transcript_path,
+        output_path=output_path,
+        open_browser=bool(args.open),
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -168,6 +211,8 @@ def main() -> int:
             return cmd_resume(args)
         if args.command == "status":
             return cmd_status(args)
+        if args.command == "transcript":
+            return cmd_transcript(args)
     except (FileNotFoundError, ValueError, RuntimeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
