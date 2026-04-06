@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "implementer.output.schema.json",
+  "title": "Implementer Output",
+  "type": "object",
+  "required": [
+    "meta",
+    "status",
+    "artifact",
+    "change_summary",
+    "risk_notes",
+    "todos",
+    "progress",
+    "unsure"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "model_id",
+        "role",
+        "loop_id",
+        "round_id",
+        "artifact_id",
+        "timestamp",
+        "tool_version"
+      ],
+      "properties": {
+        "model_id": {"type": "string", "minLength": 1},
+        "role": {"type": "string", "const": "IMPLEMENTER"},
+        "loop_id": {"type": "string", "minLength": 1},
+        "round_id": {"type": "string", "minLength": 1},
+        "artifact_id": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "tool_version": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "status": {"type": "string", "enum": ["ok", "partial", "blocked"]},
+    "artifact": {
+      "type": "object",
+      "required": ["kind", "path", "content"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["prompt", "plan", "code", "spec", "kanban"]},
+        "path": {"type": "string", "minLength": 1},
+        "content": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "change_summary": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "risk_notes": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "todos": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "progress": {
+      "type": "object",
+      "required": [
+        "phase",
+        "selected_step_id",
+        "completed_step_ids",
+        "pending_step_ids",
+        "blocked_step_ids"
+      ],
+      "properties": {
+        "phase": {"type": "string", "enum": ["plan", "execute", "integrate"]},
+        "selected_step_id": {"type": "string"},
+        "completed_step_ids": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "pending_step_ids": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "blocked_step_ids": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "unsure": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}
