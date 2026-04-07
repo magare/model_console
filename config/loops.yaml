@@ -223,20 +223,3 @@ loops:
       reviewer_count: 1
     eval_commands:
       - "echo 'complex reasoning loop eval completed'"
-
-  prompt_improvement_loop:
-    artifact_kind: prompt
-    max_rounds: 3
-    score_threshold: 95
-    stagnation_rounds: 2
-    stagnation_epsilon: 0.5
-    swap_next_round: false
-    swap_on_failure: false
-    role_assignment:
-      strategy: static
-      implementers: [gemini_primary]
-      reviewers: [claude_primary]
-      implementer_count: 1
-      reviewer_count: 1
-    eval_commands:
-      - "echo 'prompt improvement loop round completed'"
