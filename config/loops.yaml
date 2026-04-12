@@ -50,23 +50,6 @@ loops:
     eval_commands:
       - "echo 'prompt loop rubric check done'"
 
-  codex_gemini_prompt_loop:
-    artifact_kind: prompt
-    max_rounds: 3
-    score_threshold: 90
-    stagnation_rounds: 2
-    stagnation_epsilon: 0.5
-    swap_next_round: true
-    swap_on_failure: true
-    role_assignment:
-      strategy: round_robin
-      implementers: [codex_primary]
-      reviewers: [gemini_primary]
-      implementer_count: 1
-      reviewer_count: 1
-    eval_commands:
-      - "echo 'codex gemini prompt loop eval done'"
-
   product_brief_agent_spec_prompt_5_loop:
     artifact_kind: prompt
     max_rounds: 5

@@ -23,8 +23,6 @@ def build_agent_command(
     cli = agent.cli_path or provider
     model = agent.model
     workspace = str(app_cfg.workspace_root)
-    extra_args = list(agent.extra_args)
-    has_approval_override = "--approval-mode" in extra_args
 
     if provider == "claude":
         schema_json = schema_path.read_text(encoding="utf-8")
@@ -95,11 +93,11 @@ def build_agent_command(
             "json",
             "--model",
             model,
+            "--approval-mode",
+            "default",
             "--include-directories",
             workspace,
         ]
-        if not has_approval_override:
-            command.extend(["--approval-mode", "default"])
     elif provider == "mock":
         prompt_file = round_dir / "prompts" / f"{role.lower()}.prompt.txt"
         command = [
@@ -116,7 +114,7 @@ def build_agent_command(
     else:
         raise ValueError(f"Unsupported provider: {provider}")
 
-    command.extend(extra_args)
+    command.extend(agent.extra_args)
     return command
 
 
