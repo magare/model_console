@@ -17,7 +17,7 @@ agents:
     provider: gemini
     model: gemini-2.5-flash-lite
     cli_path: gemini
-    extra_args: []
+    extra_args: ["--approval-mode", "yolo"]
     env: {}
 
   copilot_primary:
