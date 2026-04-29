@@ -204,6 +204,14 @@ python3 -m pip uninstall -y UNKNOWN
 - `tasks/inbox/`: task inputs
 - `runs/`: generated run state/logs/reports/artifacts
 
+## License
+
+Model Console is source-available under the Apache License 2.0 with the Commons
+Clause License Condition v1.0. You may use, modify, and distribute the software,
+including for internal commercial use, but you may not sell Model Console itself
+or offer a product or service whose value derives entirely or substantially from
+Model Console's functionality. See `LICENSE` for the full terms.
+
 ## Notes
 
 - GitHub Copilot CLI is supported as a first-class provider via `provider: copilot` in `config/agents.yaml`. The shipped `copilot_primary` example uses the documented `copilot` binary, prompt mode (`-p`), JSONL output, and workspace-scoped file access. It follows your Copilot account default model unless you set `model:` explicitly.
