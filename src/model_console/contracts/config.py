@@ -117,6 +117,21 @@ def load_app_config(
     if not loops:
         raise ValueError("No loops configured in config/loops.yaml")
 
+    # Validate that all agent_ids referenced in loops exist in the agents dict
+    for loop_id, loop_cfg in loops.items():
+        for agent_id in loop_cfg.role_assignment.implementers:
+            if agent_id not in agents:
+                raise ValueError(
+                    f"Loop `{loop_id}` references unknown agent `{agent_id}` in implementers. "
+                    f"Available agents: {sorted(agents.keys())}"
+                )
+        for agent_id in loop_cfg.role_assignment.reviewers:
+            if agent_id not in agents:
+                raise ValueError(
+                    f"Loop `{loop_id}` references unknown agent `{agent_id}` in reviewers. "
+                    f"Available agents: {sorted(agents.keys())}"
+                )
+
     return AppConfig(
         workspace_root=workspace_root,
         run_root=run_root,

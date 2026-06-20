@@ -6,7 +6,12 @@ from pathlib import Path
 
 
 def resolve_within_workspace(workspace: Path, raw_path: str, arg_name: str) -> Path:
-    """Resolve a user path while preventing escapes outside the workspace."""
+    """Resolve a user path while preventing escapes outside the workspace.
+
+    Uses resolve() to normalize paths (handles '..' components) and verify
+    containment. Symlinks are resolved to their targets, which prevents
+    symlink-based workspace escapes.
+    """
     workspace = workspace.expanduser().resolve()
     candidate = Path(raw_path).expanduser()
     resolved = candidate.resolve() if candidate.is_absolute() else (workspace / candidate).resolve()

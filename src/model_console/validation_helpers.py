@@ -7,9 +7,11 @@ from typing import Any
 
 
 def require_mapping(value: object, label: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
+    if not isinstance(value, Mapping):
         raise ValueError(f"{label} must be a mapping")
-    return value
+    # Convert Mapping to dict for consistent return type
+    # Use dict() constructor which accepts any Mapping
+    return dict(value)
 
 
 def require_string_field(
@@ -25,5 +27,5 @@ def require_string_field(
     if not isinstance(value, str):
         raise ValueError(f"{label} field `{key}` must be a string")
     if not allow_empty and not value.strip():
-        raise ValueError(f"{label} missing required field `{key}`")
+        raise ValueError(f"{label} field `{key}` cannot be empty or whitespace only")
     return value

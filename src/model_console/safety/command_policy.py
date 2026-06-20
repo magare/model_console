@@ -17,6 +17,12 @@ _SECRET_PATTERNS = [
     re.compile(r"(api[_-]?key\s*[=:]\s*)([A-Za-z0-9_\-]{8,})", re.IGNORECASE),
     re.compile(r"(token\s*[=:]\s*)([A-Za-z0-9_\-]{8,})", re.IGNORECASE),
     re.compile(r"(password\s*[=:]\s*)([^\s]{4,})", re.IGNORECASE),
+    re.compile(r"(secret\s*[=:]\s*)([A-Za-z0-9_\-]{8,})", re.IGNORECASE),
+    re.compile(r"(credential[s]?\s*[=:]\s*)([A-Za-z0-9_\-]{8,})", re.IGNORECASE),
+    re.compile(r"(auth[_-]?token\s*[=:]\s*)([A-Za-z0-9_\-]{8,})", re.IGNORECASE),
+    re.compile(r"(access[_-]?token\s*[=:]\s*)([A-Za-z0-9_\-]{8,})", re.IGNORECASE),
+    re.compile(r"(refresh[_-]?token\s*[=:]\s*)([A-Za-z0-9_\-]{8,})", re.IGNORECASE),
+    re.compile(r"(bearer\s+)([A-Za-z0-9_\-]{20,})", re.IGNORECASE),
 ]
 
 

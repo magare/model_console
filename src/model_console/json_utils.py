@@ -35,11 +35,3 @@ def extract_json_object(text: str) -> dict[str, Any]:
             return parsed
 
     raise ValueError("Could not extract JSON object from model output")
-
-
-def load_json(path: str) -> dict[str, Any]:
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    if not isinstance(data, dict):
-        raise ValueError(f"Expected JSON object in {path}")
-    return data

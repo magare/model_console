@@ -6,7 +6,7 @@ from typing import Any
 
 
 DEFAULT_RUBRICS = {
-    "code_loop": "Correctness(35), Safety(20), Simplicity(15), Testability(15), Maintenability(15).",
+    "code_loop": "Correctness(35), Safety(20), Simplicity(15), Testability(15), Maintainability(15).",
     "complex_reasoning_loop": (
         "Dependency integrity(30), Step completion validity(25), Integration quality(20),"
         " Task adherence(15), Hallucination resistance(10)."

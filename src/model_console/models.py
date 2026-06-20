@@ -1,7 +1,7 @@
 """Shared data models (dataclasses).
 
-Defines AgentConfig, LoopConfig, Policies, AppConfig, Assignment,
-CommandResult, EvalResult, and RoundResult used across the package.
+Defines AgentConfig, RoleAssignmentConfig, LoopConfig, Policies, AppConfig,
+Assignment, CommandResult, EvalResult, and RoundResult used across the package.
 """
 
 from __future__ import annotations
@@ -9,6 +9,18 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+__all__ = [
+    "AgentConfig",
+    "RoleAssignmentConfig",
+    "LoopConfig",
+    "Policies",
+    "AppConfig",
+    "Assignment",
+    "CommandResult",
+    "EvalResult",
+    "RoundResult",
+]
 
 
 @dataclass(frozen=True)
@@ -74,8 +86,13 @@ class Assignment:
     reviewers: list[str]
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandResult:
+    """Immutable snapshot of a subprocess execution result.
+
+    Frozen to ensure the record is not modified after creation, which could
+    cause inconsistent state when shared across components.
+    """
     command: list[str]
     exit_code: int
     stdout: str
@@ -85,14 +102,27 @@ class CommandResult:
     duration_ms: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class EvalResult:
+    """Immutable record of eval command execution results.
+
+    Frozen for consistency with other result dataclasses and to ensure
+    the record is not modified after creation.
+    """
     passed: bool
     commands: list[dict[str, Any]]
 
 
-@dataclass
+@dataclass(frozen=True)
 class RoundResult:
+    """Immutable record of a single implement/review round.
+
+    Frozen to ensure the record is not modified after creation. Use
+    dataclasses.replace() to create updated instances if needed.
+
+    NOTE: The notes field is reserved for future use but not currently populated.
+    Consider removing in v2.0 if still unused.
+    """
     round_id: str
     assignment: Assignment
     implementer_output: dict[str, Any]

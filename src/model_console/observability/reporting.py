@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..models import Assignment, RoundResult
-from ..core.run_state import RunState
+
+if TYPE_CHECKING:
+    from ..core.run_state import RunState
+
+__all__ = [
+    "build_loop_report",
+    "format_summary_markdown",
+    "round_commit_message",
+    "round_history_entry",
+]
 
 
-def build_loop_report(state: RunState) -> dict[str, Any]:
+def build_loop_report(state: dict[str, Any]) -> dict[str, Any]:
     return {
         "run_id": state["run_id"],
         "loop_id": state["loop_id"],

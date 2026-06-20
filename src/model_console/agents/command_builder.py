@@ -19,7 +19,9 @@ def build_agent_command(
     round_dir: Path,
     last_message_path: Path,
 ) -> list[str]:
-    provider = agent.provider.lower()
+    provider = (agent.provider or "").lower()
+    if not provider:
+        raise ValueError(f"Agent {agent.agent_id} has no provider configured")
     cli = agent.cli_path or provider
     model = agent.model
     workspace = str(app_cfg.workspace_root)
@@ -123,7 +125,9 @@ def select_provider_output_text(
     stdout: str,
     last_message_path: Path,
 ) -> str:
-    provider = agent.provider.lower()
+    provider = (agent.provider or "").lower()
+    if not provider:
+        return stdout  # Fallback to stdout if no provider
     if provider == "codex" and last_message_path.exists():
         return last_message_path.read_text(encoding="utf-8")
     if provider == "claude":

@@ -32,6 +32,10 @@ class RoleAssignmentEngine:
             raise ValueError(f"Loop {self.loop_cfg.loop_id} has no implementers configured")
         if not rev_pool:
             raise ValueError(f"Loop {self.loop_cfg.loop_id} has no reviewers configured")
+        if role_cfg.implementer_count <= 0:
+            raise ValueError(f"Loop {self.loop_cfg.loop_id} has invalid implementer_count: {role_cfg.implementer_count} (must be > 0)")
+        if role_cfg.reviewer_count <= 0:
+            raise ValueError(f"Loop {self.loop_cfg.loop_id} has invalid reviewer_count: {role_cfg.reviewer_count} (must be > 0)")
 
         swap = False
         if self.loop_cfg.swap_next_round and ctx.round_index > 0:

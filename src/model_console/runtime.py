@@ -6,9 +6,8 @@ macOS, Linux, and Windows without scattering platform conditionals.
 
 from __future__ import annotations
 
-import ntpath
+import os
 import platform
-import posixpath
 import re
 import shlex
 import shutil
@@ -38,7 +37,7 @@ _POWERSHELL_PREFIX_PATTERN = re.compile(
 
 def current_system(system: str | None = None) -> str:
     """Return the active OS name using the same labels as platform.system()."""
-    return (system or platform.system()).strip() or platform.system()
+    return (system or platform.system()).strip()
 
 
 def is_windows(system: str | None = None) -> bool:
@@ -99,7 +98,11 @@ def canonical_command_prefix(command: str) -> str:
 
 
 def extract_shell_expression(command: Sequence[str]) -> tuple[str, str] | None:
-    """Return (shell_name, expression) when command is a supported shell wrapper."""
+    """Return (shell_name, expression) when command is a supported shell wrapper.
+
+    Returns None for unsupported shells or malformed commands. This lenient
+    error handling allows callers to handle unsupported patterns gracefully.
+    """
     if not command:
         return None
 
@@ -120,18 +123,24 @@ def extract_shell_expression(command: Sequence[str]) -> tuple[str, str] | None:
 
 
 def extract_inner_command_prefix(shell_name: str, expression: str) -> str | None:
-    """Best-effort parse of the first executable inside a shell expression."""
+    """Best-effort parse of the first executable inside a shell expression.
+
+    Returns None if parsing fails or no executable is found. This provides
+    consistent error handling with extract_shell_expression (both return None
+    on failure rather than raising).
+    """
     if shell_name in _POSIX_SHELLS:
         try:
             parts = shlex.split(expression)
-        except ValueError as exc:
-            raise RuntimeError(f"Invalid shell command expression: {expression}") from exc
+        except ValueError:
+            # Invalid shell expression - return None for consistency
+            return None
         return canonical_command_prefix(parts[0]) if parts else None
 
     if shell_name in _WINDOWS_SHELLS:
         match = _POWERSHELL_PREFIX_PATTERN.match(expression)
         if not match:
-            raise RuntimeError(f"Invalid shell command expression: {expression}")
+            return None
         raw_prefix = next((group for group in match.groups() if group), "")
         return canonical_command_prefix(raw_prefix) if raw_prefix else None
 
@@ -142,10 +151,16 @@ def _command_exists(command: str) -> bool:
     path = Path(command)
     if path.is_absolute():
         return path.exists()
-    if any(sep in command for sep in ("/", "\\")):
+    # Check for path separators using os.path.sep for cross-platform compatibility
+    # os.path.altsep may be None on some platforms, so we check for both
+    seps = {os.path.sep}
+    if os.path.altsep:
+        seps.add(os.path.altsep)
+    if any(sep in command for sep in seps):
         return path.exists()
     return shutil.which(command) is not None
 
 
 def _basename(command: str) -> str:
-    return ntpath.basename(posixpath.basename(command))
+    """Extract the basename of a command, handling the current platform correctly."""
+    return os.path.basename(command)

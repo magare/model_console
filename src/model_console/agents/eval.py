@@ -52,16 +52,16 @@ def run_eval_commands(
             error_message = (
                 f"Eval command timed out after {app_cfg.policies.run_timeout_seconds} seconds."
             )
-            if error_message not in stderr:
-                stderr = f"{stderr}\n{error_message}".strip()
+            # Always append error message to stderr for complete error reporting
+            stderr = f"{stderr}\n{error_message}".strip() if stderr else error_message
         except OSError as exc:
             exit_code = -1
             stdout = ""
             stderr = str(exc)
             error_type = "launch_error"
             error_message = f"Eval command failed to launch: {exc}"
-            if error_message not in stderr:
-                stderr = f"{stderr}\n{error_message}".strip()
+            # Always append error message to stderr for complete error reporting
+            stderr = f"{stderr}\n{error_message}".strip() if stderr else error_message
         duration_ms = int((monotonic() - start) * 1000)
         finished = utc_now_iso()
 

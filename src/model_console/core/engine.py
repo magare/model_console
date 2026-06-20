@@ -16,7 +16,7 @@ import json
 import math
 import re
 from collections.abc import Callable
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -225,24 +225,31 @@ class LoopEngine:
                 # A failed round is committed first for traceability, then reverted
                 # so the workspace returns to the last accepted state.
                 if round_result.failure and commit_sha:
-                    reverted = revert_commit(self.app_cfg.workspace_root, commit_sha)
-                    rollback_applied = reverted is not None
-                    round_result.rollback_applied = rollback_applied
+                    try:
+                        revert_commit(self.app_cfg.workspace_root, commit_sha)
+                        rollback_applied = True
+                    except RuntimeError as exc:
+                        # Log revert failure but continue - workspace state will be non-ideal
+                        self._log_event("revert_failed", commit_sha=commit_sha, error=str(exc))
+                        rollback_applied = False
+                    round_result = replace(round_result, rollback_applied=rollback_applied)
 
             if self._dependency_mode_active(state):
-                self._update_workflow_after_round(state, round_result, round_dir)
-                round_result.terminated = bool(
+                self._update_workflow_after_round(state, round_result, _round_dir=round_dir)
+                round_result = replace(round_result, terminated=bool(
                     round_result.terminated and self._workflow_completion_ready(state)
-                )
+                ))
 
             state["history"].append(_round_history_entry(round_result, commit_sha))
             state["last_round_failed"] = round_result.failure
             state["pending_fixes"] = round_result.merged_review.get("prioritized_fixes", [])
             state["scores"].append(round_result.score)
             state["next_round_index"] += 1
-            state["latest_artifact_path"] = round_result.implementer_output.get("artifact", {}).get(
-                "path", ""
-            )
+            artifact = round_result.implementer_output.get("artifact")
+            if isinstance(artifact, dict):
+                state["latest_artifact_path"] = artifact.get("path", "")
+            else:
+                state["latest_artifact_path"] = ""
             self._save_state(state)
 
             if round_result.terminated:
@@ -437,7 +444,9 @@ class LoopEngine:
         state: RunState,
         impl_outputs: list[dict[str, Any]],
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-        if len(impl_outputs) <= 1 or not assignment.reviewers:
+        if not impl_outputs:
+            raise ValueError("No implementer outputs available for selection")
+        if len(impl_outputs) == 1 or not assignment.reviewers:
             return impl_outputs[0], []
 
         primary_reviewer = assignment.reviewers[0]
@@ -471,8 +480,21 @@ class LoopEngine:
         selected_impl: dict[str, Any],
         impl_outputs: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
+        """Execute reviewer agents for the current round.
+
+        Reviewers are skipped when:
+        1. No reviewers are assigned to the round
+        2. Multiple implementer outputs exist (review requires exactly one output to review)
+
+        The multi-implementer skip is intentional: the current review design assumes
+        a single artifact to review. Multi-implementer scenarios would require a
+        different review strategy (e.g., review all outputs, merge then review, or
+        vote-based consensus).
+        """
         if len(assignment.reviewers) == 0 or len(impl_outputs) != 1:
             return []
+        if not assignment.implementers:
+            raise ValueError("No implementers assigned for review")
 
         outputs: list[dict[str, Any]] = []
         for reviewer_id in assignment.reviewers:
@@ -487,7 +509,7 @@ class LoopEngine:
                     "speaker": assignment.implementers[0],
                     "recipient": reviewer_id,
                     "role": "REVIEWER",
-                    "artifact_path": selected_impl.get("artifact", {}).get("path", ""),
+                    "artifact_path": (selected_impl.get("artifact") or {}).get("path", "") if isinstance(selected_impl.get("artifact"), dict) else "",
                     "text": "Orchestrator forwarded the latest implementer artifact for review.",
                 },
             )
@@ -783,7 +805,11 @@ class LoopEngine:
         if pending:
             ready: list[str] = []
             for step_id in pending:
-                depends_on = set(steps.get(step_id, {}).get("depends_on") or [])
+                step_data = steps.get(step_id)
+                if isinstance(step_data, dict):
+                    depends_on = set(step_data.get("depends_on") or [])
+                else:
+                    depends_on = set()
                 if depends_on.issubset(completed):
                     ready.append(step_id)
             if ready:
@@ -818,6 +844,8 @@ class LoopEngine:
         }
 
     def _select_step_from_fixes(self, ready_steps: list[str], fixes: list[dict[str, Any]]) -> str:
+        if not ready_steps:
+            raise ValueError("No ready steps available for selection")
         sorted_steps = sorted(ready_steps)
         for fix in fixes:
             text = f"{fix.get('fix', '')} {fix.get('rationale', '')}"
@@ -900,11 +928,10 @@ class LoopEngine:
         self,
         state: RunState,
         round_result: RoundResult,
-        round_dir: Path,
+        _round_dir: Path,  # Reserved for future round-level workflow diagnostics
     ) -> None:
         if not self._dependency_mode_active(state):
             return
-        del round_dir  # reserved for future round-level workflow diagnostics
 
         steps = state["workflow_steps"]
         known_step_ids = set(steps.keys())
@@ -1011,6 +1038,8 @@ class LoopEngine:
 
     def _stagnated(self, scores: list[float]) -> bool:
         k = self.loop_cfg.stagnation_rounds
+        if k <= 0:
+            return False
         if len(scores) < k + 1:
             return False
         recent = scores[-(k + 1) :]

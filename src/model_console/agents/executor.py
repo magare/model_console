@@ -114,8 +114,23 @@ class AgentExecutor:
         stderr_path = raw_dir / f"{role.lower()}.attempt{attempt_index:02d}.stderr.log"
         latest_stderr_path = raw_dir / f"{role.lower()}.stderr.log"
         start = monotonic()
+
+        # Prepare environment with validation
         env = os.environ.copy()
-        env.update(agent.env)
+        # Validate environment variable names (POSIX: alphanumeric + underscore, no leading digit)
+        for key, value in agent.env.items():
+            if not isinstance(key, str) or not key:
+                raise ValueError(f"Environment variable key must be a non-empty string, got: {key!r}")
+            # Check for valid env var name format
+            if not key[0].isalpha() and key[0] != "_":
+                raise ValueError(f"Environment variable name must start with letter or underscore: {key}")
+            if not all(c.isalnum() or c == "_" for c in key):
+                raise ValueError(f"Environment variable name must contain only alphanumeric characters and underscores: {key}")
+            # Ensure value is a string
+            if not isinstance(value, str):
+                value = str(value)
+            env[key] = value
+
         try:
             proc = subprocess.run(
                 command,
@@ -197,9 +212,9 @@ class AgentExecutor:
         # Some CLIs expose the final assistant message outside stdout JSON, so
         # normalize that before schema extraction and transcript emission.
         fallback_output_text = self._select_output_text(agent, proc.stdout, last_message_path)
-        if not provider_trace.final_text and fallback_output_text:
-            provider_trace.final_text = fallback_output_text
         output_text = provider_trace.final_text or fallback_output_text
+        # Update provider_trace with the final text for persistence in the trace
+        provider_trace.final_text = output_text
         self._write_attempt_file(last_message_path, latest_last_message_path, output_text)
         trace_path = trace_dir / f"{role.lower()}.attempt{attempt_index:02d}.provider_trace.json"
         latest_trace_path = trace_dir / f"{role.lower()}.provider_trace.json"

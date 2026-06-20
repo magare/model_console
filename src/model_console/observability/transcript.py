@@ -14,6 +14,12 @@ from typing import Any
 
 from .logging import append_jsonl
 
+__all__ = [
+    "ProviderTrace",
+    "extract_provider_trace",
+    "append_transcript_entry",
+]
+
 
 @dataclass
 class ProviderTrace:
@@ -232,7 +238,7 @@ def _extract_claude_trace(
     final_text_override: str | None,
 ) -> ProviderTrace:
     payload = _parse_single_json_object(stdout)
-    if isinstance(payload, dict) and str(payload.get("type", "")) == "result":
+    if isinstance(payload, dict) and payload.get("type") == "result":
         result_text = _coerce_text(payload.get("result"))
         usage = payload.get("usage")
         stats = usage if isinstance(usage, dict) else {}
